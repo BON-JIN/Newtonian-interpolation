@@ -1,0 +1,292 @@
+Microsoft (R) Macro Assembler Version 6.15.8803		    11/06/18 18:17:13
+compute_b.asm						     Page 1 - 1
+
+
+				.386
+				.MODEL FLAT
+
+ = [ebp + 14]			m 				EQU [ebp + 14]
+ = [ebp + 12]			n 				EQU [ebp + 12]
+ = [ebp + 8]			points  		EQU [ebp + 8]
+
+ = [ebp - 4]			denominator 	 EQU 	 [ebp - 4]
+ = [ebp - 8]			left_hand_value  EQU     [ebp - 8]
+ = [ebp - 12]			right_hand_value EQU     [ebp - 12]
+
+				PUBLIC compute_b
+
+				INCLUDE debug.h
+			      C INCLUDE io.h
+			      C ; IO.H -- header file for I/O macros
+			      C ; 32-bit version for flat memory model
+			      C ; R. Detmer   last revised 8/2000
+			      C .NOLIST     ; turn off listing
+			      C .LIST        ; begin listing
+			      C 
+			      C 
+ = 0000000D		      C CR          EQU    0Dh   ; carriage return character
+ = 0000000A		      C LF          EQU    0Ah   ; linefeed character
+			      C 
+ 00000000		      C .DATA
+ 00000000 0D 0A 00	      C carriage    BYTE     CR, LF, 0
+ 00000003  0000000D [	      C text        BYTE     13 DUP(?)
+	    00
+	   ]
+			      C 
+			      C outputW    	MACRO   var
+			      C                    itoa text, var
+			      C                    output text
+			      C                    output carriage
+			      C                 ENDM
+			      C 
+			      C outputD  	MACRO  var
+			      C                    dtoa text, var
+			      C                    output text
+			      C                    output carriage
+			      C          	ENDM
+			      C 
+			      C inputW          MACRO  prompt, location
+			      C                    output prompt
+			      C                    input text, 8
+			      C                    atoi text
+			      C                    mov location, ax
+			      C                 ENDM
+			      C 
+			      C inputD          MACRO  prompt, location
+			      C                    output prompt
+			      C                    input text, 13
+			      C                    atod text
+			      C                    mov location, eax
+			      C                 ENDM
+			      C 
+				INCLUDE io.h
+			      C ; IO.H -- header file for I/O macros
+			      C ; 32-bit version for flat memory model
+			      C ; R. Detmer   last revised 8/2000
+			      C .NOLIST     ; turn off listing
+			      C .LIST        ; begin listing
+			      C 
+				INCLUDE float.h
+			      C .NOLIST
+			      C .LIST
+			      C 
+
+ 00000010			.DATA
+ 00000010 00000000		float 			 REAL4 ? ; used temporaryly
+
+ 00000000			.CODE
+ 00000000			compute_b_rec PROC NEAR32
+ 00000000			setup:
+					; f[xn...xm] = (f[xn...xm + 1] - f[xn - 1...xm])/(xn - xm)
+ 00000000  55				push ebp
+ 00000001  8B EC			mov	 ebp, esp
+ 00000003  8B 5D 08			mov ebx , points
+
+ 00000006			comp_for_base_case:
+ 00000006  66| 8B 45 0C			mov ax , n
+ 0000000A  66| 3B 45 0E			cmp ax , m
+ 0000000E  75 29			jne for_denominator
+
+ 00000010			base_case:
+ 00000010  B8 00000000			mov eax , 0 ; initialize 
+ 00000015  66| 8B 45 0C			mov ax , n
+
+ 00000019  66| BA 0008			mov dx , 8
+ 0000001D  66| F7 E2			mul dx
+
+ 00000020  66| 98			cbw
+
+ 00000022  03 D8			add ebx , eax
+ 00000024  83 C3 04			add ebx , 4
+ 00000027  8B 03			mov eax , [ebx]
+ 00000029  A3 00000010 R		mov float , eax
+
+ 0000002E  D9 05 00000010 R		fld float ; noneed
+
+
+ 00000034  E9 0000008D			jmp DONE
+
+ 00000039			for_denominator:
+ 00000039  8B CB			mov ecx , ebx
+ 0000003B  B8 00000000			mov eax , 0
+ 00000040  66| 8B 45 0C			mov ax , n
+ 00000044  66| BA 0008			mov dx , 8
+ 00000048  66| F7 E2			mul dx
+ 0000004B  66| 98			cbw
+ 0000004D  03 C8			add ecx , eax
+ 0000004F  8B 01			mov eax , [ecx]
+ 00000051  A3 00000010 R		mov float , eax
+ 00000056  D9 05 00000010 R		fld float
+					
+ 0000005C  8B CB			mov ecx , ebx
+ 0000005E  B8 00000000			mov eax , 0
+ 00000063  66| 8B 45 0E			mov ax , m
+ 00000067  66| BA 0008			mov dx , 8
+ 0000006B  66| F7 E2			mul dx
+ 0000006E  66| 98			cbw
+ 00000070  03 C8			add ecx , eax
+ 00000072  8B 01			mov eax , [ecx]
+ 00000074  A3 00000010 R		mov float , eax
+ 00000079  D9 05 00000010 R		fld float
+						
+
+ 0000007F  DE E9			fsub
+
+ 00000081  D9 5D FC			fstp REAL4 PTR denominator
+
+ 00000084  FF 75 FC			push denominator
+
+ 00000087			rec: 
+					; f[xn...xm] = (f[xn...xm + 1] - f[xn - 1...xm])/(xn - xm)
+					; setup for f[xn...xm + 1]
+ 00000087  66| 8B 45 0E			mov ax , m
+ 0000008B  66| 40			inc ax
+ 0000008D  66| 8B 55 0C			mov dx , n
+
+ 00000091  66| 50			push	ax 		; m
+ 00000093  66| 52			push	dx 		; n
+ 00000095  FF 75 08			push	points	; points array
+
+ 00000098  E8 FFFFFF63			call 	compute_b_rec 	; call recursive function
+ 0000009D  D9 5D F8			fstp 	REAL4 PTR left_hand_value ; store the value in left_hand_value
+
+					; set up for f[xn - 1...xm]
+ 000000A0  66| 8B 45 0C			mov ax , n
+ 000000A4  66| 48			dec ax
+ 000000A6  66| 8B 55 0E			mov dx , m
+
+ 000000AA  66| 52			push dx		; m
+ 000000AC  66| 50			push ax		; n
+ 000000AE  FF 75 08			push points ; points array
+
+ 000000B1  E8 FFFFFF4A			call 	compute_b_rec
+ 000000B6  D9 5D F4			fstp 	REAL4 PTR right_hand_value ; store the value in right_hand_value
+
+					; (f[xn...xm + 1] - f[xn - 1...xm])
+ 000000B9  D9 45 F8			fld REAL4 PTR left_hand_value
+ 000000BC  D9 45 F4			fld REAL4 PTR right_hand_value
+ 000000BF  DE E9			fsub ; ST(1) - ST, the numerator for next calculation will be remained in the stuck
+					
+ 000000C1  D9 45 FC			fld REAL4 PTR denominator
+ 000000C4  DE F9			fdiv ; ST(1) / ST
+
+ 000000C6			DONE:
+
+ 000000C6  8B E5			mov     esp, ebp         
+ 000000C8  5D				pop		ebp
+
+ 000000C9  C3				ret 
+ 000000CA			compute_b_rec ENDP
+
+
+
+ 000000CA			compute_b	PROC	NEAR32
+				; entry code
+ 000000CA  55				push ebp
+ 000000CB  8B EC			mov ebp , esp
+
+ 000000CD  6A 00			pushd  0         
+ 000000CF  6A 00			pushd  0
+ 000000D1  6A 00			pushd  0
+					
+				; process
+
+ 000000D3  FF 75 0E			push m
+ 000000D6  FF 75 0C			push n
+ 000000D9  FF 75 08			push points
+
+ 000000DC  E8 FFFFFF1F			call compute_b_rec ;  n , m , points
+					
+					; result in st(0)
+
+				; exit code
+
+ 000000E1  8B E5			mov esp , ebp	
+ 000000E3  5D				pop ebp
+ 000000E4  C2 0008			ret 8
+					
+ 000000E7			compute_b ENDP
+
+				END 
+Microsoft (R) Macro Assembler Version 6.15.8803		    11/06/18 18:17:13
+compute_b.asm						     Symbols 2 - 1
+
+
+
+
+Macros:
+
+                N a m e                 Type
+
+atod . . . . . . . . . . . . . .	Proc
+atof . . . . . . . . . . . . . .	Proc
+atoi . . . . . . . . . . . . . .	Proc
+dtoa . . . . . . . . . . . . . .	Proc
+ftoa . . . . . . . . . . . . . .	Proc
+inputD . . . . . . . . . . . . .	Proc
+inputW . . . . . . . . . . . . .	Proc
+input  . . . . . . . . . . . . .	Proc
+itoa . . . . . . . . . . . . . .	Proc
+outputD  . . . . . . . . . . . .	Proc
+outputW  . . . . . . . . . . . .	Proc
+output . . . . . . . . . . . . .	Proc
+
+
+Segments and Groups:
+
+                N a m e                 Size     Length   Align   Combine Class
+
+FLAT . . . . . . . . . . . . . .	GROUP
+_DATA  . . . . . . . . . . . . .	32 Bit	 00000014 DWord	  Public  'DATA'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 000000E7 DWord	  Public  'CODE'	
+
+
+Procedures,  parameters and locals:
+
+                N a m e                 Type     Value    Attr
+
+compute_b_rec  . . . . . . . . .	P Near	 00000000 _TEXT	Length= 000000CA Public
+  setup  . . . . . . . . . . . .	L Near	 00000000 _TEXT	
+  comp_for_base_case . . . . . .	L Near	 00000006 _TEXT	
+  base_case  . . . . . . . . . .	L Near	 00000010 _TEXT	
+  for_denominator  . . . . . . .	L Near	 00000039 _TEXT	
+  rec  . . . . . . . . . . . . .	L Near	 00000087 _TEXT	
+  DONE . . . . . . . . . . . . .	L Near	 000000C6 _TEXT	
+compute_b  . . . . . . . . . . .	P Near	 000000CA _TEXT	Length= 0000001D Public
+
+
+Symbols:
+
+                N a m e                 Type     Value    Attr
+
+@CodeSize  . . . . . . . . . . .	Number	 00000000h   
+@DataSize  . . . . . . . . . . .	Number	 00000000h   
+@Interface . . . . . . . . . . .	Number	 00000000h   
+@Model . . . . . . . . . . . . .	Number	 00000007h   
+@code  . . . . . . . . . . . . .	Text   	 _TEXT
+@data  . . . . . . . . . . . . .	Text   	 FLAT
+@fardata?  . . . . . . . . . . .	Text   	 FLAT
+@fardata . . . . . . . . . . . .	Text   	 FLAT
+@stack . . . . . . . . . . . . .	Text   	 FLAT
+CR . . . . . . . . . . . . . . .	Number	 0000000Dh   
+LF . . . . . . . . . . . . . . .	Number	 0000000Ah   
+atodproc . . . . . . . . . . . .	L Near	 00000000 FLAT	External
+atof_proc  . . . . . . . . . . .	L Near	 00000000 FLAT	External
+atoiproc . . . . . . . . . . . .	L Near	 00000000 FLAT	External
+carriage . . . . . . . . . . . .	Byte	 00000000 _DATA	
+denominator  . . . . . . . . . .	Text   	 [ebp - 4]
+dtoaproc . . . . . . . . . . . .	L Near	 00000000 FLAT	External
+float  . . . . . . . . . . . . .	DWord	 00000010 _DATA	
+ftoa_proc  . . . . . . . . . . .	L Near	 00000000 FLAT	External
+inproc . . . . . . . . . . . . .	L Near	 00000000 FLAT	External
+itoaproc . . . . . . . . . . . .	L Near	 00000000 FLAT	External
+left_hand_value  . . . . . . . .	Text   	 [ebp - 8]
+m  . . . . . . . . . . . . . . .	Text   	 [ebp + 14]
+n  . . . . . . . . . . . . . . .	Text   	 [ebp + 12]
+outproc  . . . . . . . . . . . .	L Near	 00000000 FLAT	External
+points . . . . . . . . . . . . .	Text   	 [ebp + 8]
+right_hand_value . . . . . . . .	Text   	 [ebp - 12]
+text . . . . . . . . . . . . . .	Byte	 00000003 _DATA	
+
+	   0 Warnings
+	   0 Errors
